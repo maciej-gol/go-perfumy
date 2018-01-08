@@ -1,0 +1,8 @@
+#!/bin/bash
+OLD_GOPATH="${GOPATH}"
+export GOPATH="$(pwd)"
+
+function deactivate {
+    export GOPATH="$OLD_GOPATH"
+    unset -f deactivate
+}
