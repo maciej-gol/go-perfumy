@@ -2,11 +2,13 @@ package main
 
 import (
     "encoding/csv"
+    "flag"
     "fmt"
     "github.com/PuerkitoBio/goquery"
     "io/ioutil"
     "net/http"
     "os"
+    "path/filepath"
     "strconv"
     "time"
 )
@@ -27,20 +29,21 @@ func fetch_and_process_url(url string) ([]*ItemPage, []string) {
     return readItems(string(body))
 }
 
-func fetch_parphumes(workersChan chan int, num, step int) {
+func fetch_parphumes(workersChan chan int, num, step int, output_dir string) {
     max_page := 10000
     page := num
     directory_name := time.Now().Format("2006-01-02")
     os.MkdirAll(directory_name, os.ModePerm)
-    filename := fmt.Sprintf("%s/%d.csv", directory_name, num)
-    out, err := os.Create(filename)
+    filename := fmt.Sprintf("%d.csv", num)
+    filepath := filepath.Join(output_dir, directory_name, filename)
+    out, err := os.Create(filepath)
     if err != nil {
         workersChan <- num
         return
     }
     defer out.Close()
 
-    fmt.Printf("[%d] Writing to %q.\n", num, filename)
+    fmt.Printf("[%d] Writing to %q.\n", num, filepath)
     csv_writer := csv.NewWriter(out)
     csv_writer.Write([]string{"brand", "name", "variant", "price"})
 
@@ -80,18 +83,31 @@ func fetch_parphumes(workersChan chan int, num, step int) {
     workersChan <- num
 }
 
-func main() {
+func start_crawl(num_workers int, output_dir string) {
     workersChan := make(chan int)
-    num_workers := 5
-    start := time.Now()
+    output_dir, err := filepath.Abs(output_dir)
+    if err != nil {
+        fmt.Printf("Failed to get path.")
+        return
+    }
 
     for i := 1; i <= num_workers; i++ {
-        go fetch_parphumes(workersChan, i, num_workers)
+        go fetch_parphumes(workersChan, i, num_workers, output_dir)
     }
 
     for i := 1; i <= num_workers; i++ {
         <-workersChan
     }
+
+}
+
+func main() {
+    start := time.Now()
+
+    output_dir_ptr := flag.String("output-dir", "", "Directory to output the crawls.")
+    flag.Parse()
+
+    start_crawl(5, *output_dir_ptr)
 
     fmt.Printf("Finished in %d seconds.\n", int64(time.Now().Sub(start)/time.Second))
 }
