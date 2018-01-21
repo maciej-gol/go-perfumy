@@ -24,6 +24,7 @@ type ItemPage struct {
     price   float64
     brand   string
     variant string
+    discountInfo string
 }
 
 func create(body, brand, name string) (*ItemPage, error) {
@@ -58,6 +59,8 @@ func createFromNode(node *goquery.Selection, brand, name string) (*ItemPage, err
     } else {
         item.price, err = strconv.ParseFloat(price_str, 64)
     }
+
+    item.discountInfo = node.Find("p.price span").Eq(1).Text()
     return item, err
 }
 

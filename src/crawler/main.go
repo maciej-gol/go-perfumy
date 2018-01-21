@@ -33,17 +33,18 @@ func fetch_parphumes(workersChan chan int, num, step int, output_dir string) {
     max_page := 10000
     page := num
     directory_name := time.Now().Format("2006-01-02")
-    os.MkdirAll(directory_name, os.ModePerm)
     filename := fmt.Sprintf("%d.csv", num)
-    filepath := filepath.Join(output_dir, directory_name, filename)
-    out, err := os.Create(filepath)
+    file_path := filepath.Join(output_dir, directory_name, filename)
+    os.MkdirAll(filepath.Dir(file_path), os.ModePerm)
+    out, err := os.Create(file_path)
     if err != nil {
+        fmt.Printf("[%d] Failed to create file %q: %s.\n", num, file_path, err)
         workersChan <- num
         return
     }
     defer out.Close()
 
-    fmt.Printf("[%d] Writing to %q.\n", num, filepath)
+    fmt.Printf("[%d] Writing to %q.\n", num, file_path)
     csv_writer := csv.NewWriter(out)
     csv_writer.Write([]string{"brand", "name", "variant", "price"})
 
@@ -70,7 +71,7 @@ func fetch_parphumes(workersChan chan int, num, step int, output_dir string) {
             items, _ := fetch_and_process_url(href)
             for _, item := range items {
                 price := fmt.Sprintf("%.02f", item.price)
-                csv_writer.Write([]string{item.brand, item.name, item.variant, price})
+                csv_writer.Write([]string{item.brand, item.name, item.variant, price, item.discountInfo})
             }
         })
 
@@ -98,7 +99,6 @@ func start_crawl(num_workers int, output_dir string) {
     for i := 1; i <= num_workers; i++ {
         <-workersChan
     }
-
 }
 
 func main() {
