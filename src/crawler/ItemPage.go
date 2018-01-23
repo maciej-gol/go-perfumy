@@ -27,6 +27,7 @@ type ItemPage struct {
     discountInfo string
     url string
     html string
+    code string
 }
 
 func create(body, brand, name string) (*ItemPage, error) {
@@ -65,6 +66,11 @@ func createFromNode(node *goquery.Selection, brand, name, url string) (*ItemPage
     }
 
     item.discountInfo = node.Find("p.price span").Eq(1).Text()
+
+    code_str := node.Find("p.code").Text()
+    if len(code_str) > 0 {
+        item.code = strings.Replace(code_str, "Kod: ", "", -1)
+    }
     return item, err
 }
 
