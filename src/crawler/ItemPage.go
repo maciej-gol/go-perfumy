@@ -25,6 +25,8 @@ type ItemPage struct {
     brand   string
     variant string
     discountInfo string
+    url string
+    html string
 }
 
 func create(body, brand, name string) (*ItemPage, error) {
@@ -46,11 +48,13 @@ func create(body, brand, name string) (*ItemPage, error) {
     return item, nil
 }
 
-func createFromNode(node *goquery.Selection, brand, name string) (*ItemPage, error) {
+func createFromNode(node *goquery.Selection, brand, name, url string) (*ItemPage, error) {
     item := new(ItemPage)
     var err error = nil
     item.brand = brand
     item.name = name
+    item.url = url
+    item.html, _ = node.Html()
 
     item.variant = strings.Replace(node.Find("span.name").Text(), "Wyprzedaż", "", -1)
     price_str, exists := node.Find("span[itemprop=\"price\"]").Attr("content")
@@ -88,7 +92,7 @@ func (ip *ItemPage) getItemPrice() (float64, error) {
     return val, nil
 }
 
-func readItems(body string) ([]*ItemPage, []string) {
+func readItems(body, url string) ([]*ItemPage, []string) {
     var items []*ItemPage
     var others []string
 
@@ -104,7 +108,7 @@ func readItems(body string) ([]*ItemPage, []string) {
     variants := doc.Find("#variants li.item")
 
     variants.Each(func(n int, node *goquery.Selection) {
-        item, err := createFromNode(node, brand, name)
+        item, err := createFromNode(node, brand, name, url)
         if err != nil {
             fmt.Printf("err %s\n", err)
             return

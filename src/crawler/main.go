@@ -26,7 +26,7 @@ func fetch_and_process_url(url string) ([]*ItemPage, []string) {
         fmt.Printf("Error reading response %s.\n", url)
     }
 
-    return readItems(string(body))
+    return readItems(string(body), url)
 }
 
 func fetch_parphumes(workersChan chan int, num, step int, output_dir string) {
@@ -46,7 +46,7 @@ func fetch_parphumes(workersChan chan int, num, step int, output_dir string) {
 
     fmt.Printf("[%d] Writing to %q.\n", num, file_path)
     csv_writer := csv.NewWriter(out)
-    csv_writer.Write([]string{"brand", "name", "variant", "price"})
+    csv_writer.Write([]string{"brand", "name", "variant", "price", "discountInfo", "url", "html"})
 
     for page <= max_page {
         url := fmt.Sprintf("https://www.iperfumy.pl/perfumy-new/?f=%d-2-6362", page)
@@ -71,7 +71,7 @@ func fetch_parphumes(workersChan chan int, num, step int, output_dir string) {
             items, _ := fetch_and_process_url(href)
             for _, item := range items {
                 price := fmt.Sprintf("%.02f", item.price)
-                csv_writer.Write([]string{item.brand, item.name, item.variant, price, item.discountInfo})
+                csv_writer.Write([]string{item.brand, item.name, item.variant, price, item.discountInfo, item.url, item.html})
             }
         })
 
