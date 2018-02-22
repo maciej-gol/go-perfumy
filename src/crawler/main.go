@@ -30,8 +30,6 @@ func fetch_and_process_url(url string) ([]*ItemPage, []string) {
 }
 
 func fetch_parphumes(workersChan chan int, num, step int, output_dir string) {
-    max_page := 10000
-    page := num
     directory_name := time.Now().Format("2006-01-02")
     filename := fmt.Sprintf("%d.csv", num)
     file_path := filepath.Join(output_dir, directory_name, filename)
@@ -48,36 +46,47 @@ func fetch_parphumes(workersChan chan int, num, step int, output_dir string) {
     csv_writer := csv.NewWriter(out)
     csv_writer.Write([]string{"brand", "name", "variant", "code", "price", "discountInfo", "url", "html"})
 
-    for page <= max_page {
-        url := fmt.Sprintf("https://www.iperfumy.pl/perfumy-new/?f=%d-2-6362", page)
-        doc, err := goquery.NewDocument(url)
-        if err != nil {
-            fmt.Printf("Failed to fetch %q: %s.\n", url, err)
-            return
-        }
+    urls := []string{
+        "https://www.iperfumy.pl/perfumy/?f=%d-2-6362",
+        "https://www.iperfumy.pl/kosmetyka/?f=%d-2-2",
+        "https://www.iperfumy.pl/dermokosmetyki/?f=%d-2-100261",
+    }
+    for _, url_format := range urls {
+        max_page := 10000
+        page := num
+        fmt.Printf("Fetching urls %s.\n", url_format)
 
-        max_page, err = strconv.Atoi(doc.Find("span.pages > a").Eq(-2).Text())
-        if err != nil {
-            fmt.Printf("Failed to parse last page: %s.\n", err)
-            max_page = -1
-        }
-
-        doc.Find(".product-list li.item a:first-child").Each(func(n int, node *goquery.Selection) {
-            href, exists := node.Attr("href")
-            if !exists {
+        for page <= max_page {
+            url := fmt.Sprintf(url_format, page)
+            doc, err := goquery.NewDocument(url)
+            if err != nil {
+                fmt.Printf("Failed to fetch %q: %s.\n", url, err)
                 return
             }
 
-            items, _ := fetch_and_process_url(href)
-            for _, item := range items {
-                price := fmt.Sprintf("%.02f", item.price)
-                csv_writer.Write([]string{item.brand, item.name, item.variant, item.code, price, item.discountInfo, item.url, item.html})
+            max_page, err = strconv.Atoi(doc.Find("span.pages > a").Eq(-2).Text())
+            if err != nil {
+                fmt.Printf("Failed to parse last page: %s.\n", err)
+                max_page = -1
             }
-        })
 
-        page += step
-        if ((page-num)/step)%20 == 0 {
-            fmt.Printf("[%d] Fetching page %d of %d.\n", num, page, max_page)
+            doc.Find(".product-list li.item a:first-child").Each(func(n int, node *goquery.Selection) {
+                href, exists := node.Attr("href")
+                if !exists {
+                    return
+                }
+
+                items, _ := fetch_and_process_url(href)
+                for _, item := range items {
+                    price := fmt.Sprintf("%.02f", item.price)
+                    csv_writer.Write([]string{item.brand, item.name, item.variant, item.code, price, item.discountInfo, item.url, item.html})
+                }
+            })
+
+            page += step
+            if ((page-num)/step)%20 == 0 {
+                fmt.Printf("[%d] Fetched page %d of %d.\n", num, page, max_page)
+            }
         }
     }
     csv_writer.Flush()
