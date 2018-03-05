@@ -1,0 +1,5 @@
+#!/bin/bash
+
+docker build -t askriz/perfumy-crawler:latest .
+docker push askriz/perfumy-crawler:latest
+ssh root@kroolik1dq.nazwa.pl "docker pull askriz/perfumy-crawler:latest"
